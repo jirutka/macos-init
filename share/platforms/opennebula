@@ -1,0 +1,97 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -euo pipefail
+
+readonly DEFAULT_CONTEXT_MAPPING="
+	SSH_PUBLIC_KEY=ADMIN_SSH_KEYS
+	USERNAME=ADMIN_USER
+	"
+readonly ETH_CONTEXT_MAPPING="
+	METHOD=IPV4_METHOD
+	IP=IPV4_ADDRESS
+	MASK=IPV4_MASK
+	GATEWAY=IPV4_GATEWAY
+	IP6_METHOD=IPV6_METHOD
+	IP6=IPV6_ADDRESS
+	IP6_PREFIX_LENGTH=IPV6_PREFIX
+	IP6_GATEWAY=IPV6_GATEWAY
+	DNS=DNS_SERVERS
+	SEARCH_DOMAIN=DNS_SEARCH
+	"
+
+. "$(dirname "$0")"/../utils.sh
+. "$MACINIT_CONFIG" || die "Failed to source config $MACINIT_CONFIG"
+
+: ${opennebula_volume_label:="CONTEXT"}
+: ${context_mount_dir:="/Volumes/$opennebula_volume_label"}
+
+read_params() {
+	diskutil mount "$opennebula_volume_label" >/dev/null
+	check_context
+
+	set -f  # disable globbing
+
+	local key var val
+	for key in $(context_keys); do
+		var="$(remap_key "$key")"
+
+		if is_protected_var "$var"; then
+			warn "Ignoring protected variable name: $var"
+			continue
+		fi
+
+		val="$(
+			. "$context_mount_dir"/context.sh
+			eval "printf '%s\n' \$$key"
+		)" >/dev/null
+		printf "export %s='%s'\n" "$var" "$(escape_squote "$val")"
+	done
+
+	diskutil umount "$opennebula_volume_label" >/dev/null
+}
+
+check_context() {
+	[ -f "$context_mount_dir/context.sh" ] \
+		|| die "File $context_mount_dir/context.sh does not exist or not readable"
+
+	sh -n "$context_mount_dir/context.sh" 2>/dev/null \
+		|| die "File $context_mount_dir/context.sh is not a valid shell script"
+}
+
+# Prints names of variables declared in the context.sh.
+context_keys() {
+	env -i /bin/dash -ea <<-EOF
+		. "$context_mount_dir"/context.sh
+		awk 'BEGIN { for (v in ENVIRON) print v }' \
+			| grep -Ev '^PWD|SHLVL|AWKPATH|AWKLIBPATH$'
+	EOF
+}
+
+remap_key() {
+	local key="$1"
+	local kv
+
+	for kv in ${params_mapping-} $DEFAULT_CONTEXT_MAPPING; do
+		if [ "${kv%%=*}" = "$key" ]; then
+			echo "${kv#*=}"
+			return 0
+		fi
+	done
+
+	case "$key" in ETH[0-9]*_)
+		for kv in $ETH_CONTEXT_MAPPING; do
+			if [ "${kv%%=*}" = "${key#ETH[0-9]*_}" ]; then
+				echo "${key%%_*}_${kv#*=}"
+				return 0
+			fi
+		done
+	esac
+
+	normalize_var_name "$key"
+}
+
+
+case "${1-}" in
+	read_params) read_params;;
+	*) die "Unknown action: ${1-}"
+esac

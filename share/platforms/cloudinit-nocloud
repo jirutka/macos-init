@@ -1,0 +1,91 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -euo pipefail
+
+readonly DEFAULT_USERDATA_MAPPING="
+	hostname=SET_HOSTNAME
+	fqdn=FQDN
+	timezone=TIMEZONE
+	user=ADMIN_USER
+	ssh_authorized_keys/*=ADMIN_SSH_KEYS
+	users/0/name=ADMIN_USER
+	users/0/groups/1=ADMIN_GROUP
+	users/0/shell=ADMIN_SHELL
+	users/0/ssh_authorized_keys/*=ADMIN_SSH_KEYS
+	"
+
+. "$(dirname "$0")"/../utils.sh
+. "$MACINIT_CONFIG" || die "Failed to source config $MACINIT_CONFIG"
+
+: ${cloudinit_volume_label:="cidata"}
+: ${cidata_mount_dir:="/Volumes/$cloudinit_volume_label"}
+
+command -v yq >/dev/null || die "yq was not found; install it using 'brew install yq'"
+
+read_params() {
+	diskutil mount "$cloudinit_volume_label" >/dev/null
+	check_cidata
+
+	set -f  # disable globbing
+
+	local kv key var val
+	for kv in $(get_mapping); do
+		key=${kv%%=*}
+		var=${kv#*=}
+
+		if is_protected_var "$var"; then
+			warn "Ignoring protected variable name: $var"
+			continue
+		fi
+		if val=$(cidata_get 'user-data' "$key") || val=$(cidata_get 'meta-data' "$key"); then
+			printf "export %s='%s'\n" "$var" "$(escape_squote "$val")"
+		fi
+	done
+
+	diskutil umount "$cloudinit_volume_label" >/dev/null
+}
+
+check_cidata() {
+	[ -f "$cidata_mount_dir/meta-data" ] \
+		|| die "File $cidata_mount_dir/meta-data does not exist or not readable"
+
+	local header
+	header=$(head -n1 "$cidata_mount_dir/user-data") \
+		|| die "File $cidata_mount_dir/user-data does not exist or not readable"
+
+	case "${header%% *}" in
+		'#cloud-config') return 0;;
+		'#!'*) die 'user-data of type script is not supported';;
+		*) die 'Unknown user-data type';;
+	esac
+}
+
+get_mapping() {
+	set +f  # disable globbing
+
+	local kv; for kv in ${params_mapping:-"+default"}; do
+		if [ "$kv" = '+default' ]; then
+			printf '%s\n' $DEFAULT_USERDATA_MAPPING
+		else
+			printf '%s\n' "$kv"
+		fi
+	done
+}
+
+cidata_get() {
+	local file="$cidata_mount_dir/$1"
+	local keypath="$2"
+
+	local query="$(echo "${keypath%/\*}" | tr '/' '\n' | xargs printf '."%s"')"
+	case "$keypath" in
+		*/'*') query="$query | .[]";;
+	esac
+
+	yq --exit-status --no-colors --unwrapScalar "$query" "$file" 2>/dev/null
+}
+
+
+case "${1-}" in
+	read_params) read_params;;
+	*) die "Unknown action: ${1-}"
+esac

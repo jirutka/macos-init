@@ -1,0 +1,124 @@
+= macOS-init
+:proj-name: macos-init
+:version: 0.0.0
+:gh-name: jirutka/{proj-name}
+:scripts-dir: share/scripts
+
+This project provides “provisioning” scripts for macOS virtual machines running on platforms supporting https://cloudinit.readthedocs.io/en/latest/reference/datasources/nocloud.html[cloud-init/nocloud] or OpenNebula (more platforms may be supported in the future).
+
+WIP
+
+
+== Supported platforms
+
+=== Cloud-init/nocloud
+
+This platform reads parameters from files provided on an ISO 9660 (or VFAT) filesystem (typically a virtual CD-ROM) labeled `cidata`, specifically from the `meta-data` file and the `user-data` file in https://cloudinit.readthedocs.io/en/latest/reference/examples.html[cloud-config] format.
+
+By default, `**$ADMIN_USER**` is mapped to the first user in the `users` directive or to the directive `user` (in this order of precedence).
+
+
+=== OpenNebula
+
+This platform reads parameters from files on an ISO 9660 (or VFAT) filesystem (a virtual CD-ROM) labeled `CONTEXT`, specifically the `context.sh` shell script.
+
+By default, `**$ADMIN_USER**` is mapped to `USERNAME` and `**$ADMIN_SSH_KEYS**` is mapped to the `SSH_PUBLIC_KEY` context variable.
+
+
+== Scripts
+
+=== link:{scripts-dir}/50-admin-user[10-network]
+
+*Note*: This script is fully supported only on *OpenNebula*. If you use Cloud-init/nocloud, you must specify `params_mapping` in link:etc/{proj-name}.conf[] according to your environment.
+
+Configures network interfaces (using `networksetup`).
+
+It supports the following variables:
+
+* `**$ETH<n>_MAC**` -- Used to find the correct interface by MAC address.
+* `**$ETH<n>_IPV4_METHOD**` -- Method how to configure IPv4 on the interface. Supported options:
+** `static` -- static configuration,
+** `dhcp` (or `dhcp4`) -- automatic using DHCP.
+* `**$ETH<n>_IPV4_ADDRESS**` -- IPv4 address for the interface (required for `static`).
+* `**$ETH<n>_IPV4_MASK**` -- IPv4 network mask for the interface (required for `static`).
+* `**$ETH<n>_IPV4_GATEWAY**` -- Default IPv4 gateway for the interface (required for `static`).
+* `**$ETH<n>_IPV6_METHOD**` -- Method how to configure IPv6 on the interface. Supported options:
+** `static` (or `static6`) -- static configuration,
+** `auto` (or `dhcp`, `dhcp6`, `ipv6_slaac`) -- automatic configuration (using SLAAC or DHCPv6),
+** `disable` -- disables IPv6 on the interface.
+* `**$ETH<n>_IPV6_ADDRESS**` -- IPv6 address for the interface (required for `static`).
+* `**$ETH<n>_IPV6_PREFIX**` -- IPv6 prefix for the interface (default is `/64`).
+* `**$ETH<n>_IPV6_GATEWAY**` -- Default IPv6 gateway for the interface (required for `static`).
+* `**$ETH<n>_DNS_SERVERS**` -- DNS servers (as space-separated addressess).
+* `**$ETH<n>_DNS_SEARCH**` -- The domain search list.
+
+
+=== link:{scripts-dir}/50-admin-user[50-admin-user]
+
+Creates an user account named `**$ADMIN_USER**` with the admin role and shell `**$ADMIN_SHELL**`.
+
+If `**$ADMIN_USER**` is not provided, this script is skipped.
+
+
+=== link:{scripts-dir}/50-grow-fs[50-grow-fs]
+
+Extends the root filesystem (container) to the maximum disk capacity.
+Only APFS is currently supported.
+
+
+=== link:{scripts-dir}/50-hostname[50-hostname]
+
+Sets the hostname to `**$FQDN**` or, if not provided, `**$SET_HOSTNAME**`.
+It should contain only alphanumeric ASCII characters, a hyphen and period (`[a-zA-Z0-9.-]`), all other characters will be replaced with a hyphen (`-`).
+
+
+=== link:{scripts-dir}/50-timezone[50-timezone]
+
+Changes the system timezone to `**$TIMEZONE**` (e.g. `Europe/Prague`, `UTC`), if provided.
+
+
+=== link:{scripts-dir}/60-ssh-keys[60-ssh-keys]
+
+If `**$ADMIN_SSH_KEYS**` with SSH public key(s) is provided, adds them to `authorized_keys` of the user specified in `**$ADMIN_USER**`.
+
+
+== Installation
+
+=== Using Homebrew
+
+[source, sh, subs="+attributes"]
+----
+brew tap {gh-name} https://github.com/{gh-name}
+
+brew install {proj-name}
+sudo brew services start {proj-name}
+----
+
+
+=== From source tarball
+
+[source, sh, subs="+attributes"]
+----
+curl https://github.com/{gh-name}/archive/v{version}/{proj-name}-{version}.tar.gz | tar -xz
+cd {proj-name}-{version}
+
+sudo make install
+sudo launchctl load /Library/LaunchDaemons/cz.jirutka.{proj-name}.plist
+----
+
+
+=== From git
+
+[source, sh, subs="+attributes"]
+----
+git clone https://github.com/{gh-name}.git
+cd {proj-name}
+
+sudo make install
+sudo launchctl load /Library/LaunchDaemons/cz.jirutka.{proj-name}.plist
+----
+
+
+== License
+
+This project is licensed under http://opensource.org/licenses/MIT/[MIT License].

@@ -1,0 +1,52 @@
+#!/bin/sh
+set -euo pipefail
+
+readonly VERSION='0.0.0'
+readonly BASE_DIR='/usr/local/share/macos-init'
+readonly CONFIG_FILE="${MACINIT_CONFIG:-"/usr/local/etc/macos-init.conf"}"
+
+export MACINIT_CONFIG="$CONFIG_FILE"
+
+case "${1-}" in
+	-h | --help) echo "Usage: $0 [--help | --version]"; exit 0;;
+	-V | --version) echo "macos-init $VERSION"; exit 0;;
+esac
+
+# Defaults
+skip_scripts=
+platforms_dir="$BASE_DIR/platforms"
+script_dirs="/usr/local/etc/macos-init.d $BASE_DIR/scripts"
+
+. "$BASE_DIR"/utils.sh
+
+[ -f "$CONFIG_FILE" ] \
+	|| die "Config file '$CONFIG_FILE' does not exist or is not readable"
+. "$CONFIG_FILE"
+
+[ -f "$platforms_dir/$platform" ] \
+	|| die "Unsupported platform: $platform"
+
+params="$("$platforms_dir/$platform" read_params)" \
+	|| die "Failed to read parameters for platform $platform"
+eval "$params"
+
+scripts=$(find $script_dirs \
+	! -type d -perm +1 -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null \
+	| sort | uniq || :)
+[ "$scripts" ] || die 'No provisioning scripts found!'
+
+rc=0
+for script in $scripts; do
+	for dir in $script_dirs; do
+		[ -x "$dir/$script" ] || continue
+		list_has "${script#[0-9]*-}" ${SKIP_SCRIPTS:-} $skip_scripts && break
+
+		"$dir/$script" || {
+			warn "Provisioning script $script failed"
+			rc=1
+		}
+		break
+	done
+done
+
+exit $rc

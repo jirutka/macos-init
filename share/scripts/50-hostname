@@ -1,0 +1,16 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -eu
+
+[ "${FQDN-}" ] || [ "${SET_HOSTNAME-}" ] || exit 0
+
+cur_hostname="$(scutil --get HostName)" || :
+
+# Sanitize hostname.
+new_hostname="$(printf '%s\n' "${FQDN:-$SET_HOSTNAME}" \
+	| sed 's/[^-a-zA-Z0-9\.]/-/g; s/^[.-]*//g; s/[.-]*$//g')"
+
+if [ "$cur_hostname" != "$new_hostname" ]; then
+	echo "Changing hostname from '$cur_hostname' to '$new_hostname'" >&2
+	scutil --set HostName "$new_hostname"
+fi

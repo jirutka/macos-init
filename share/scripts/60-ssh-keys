@@ -1,0 +1,38 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -eu
+
+update_ssh_keys() {
+	local user="$1"
+	local keys="$2"
+
+	local homedir
+	if ! homedir="$(dscl . -read "/Users/$user" NFSHomeDirectory)"; then
+		echo "ERROR: Failed to get home directory of user $user" >&2
+		return 1
+	fi
+	homedir="${homedir#*: }"  # strip 'FSHomeDirectory: '
+
+	local auth_file="$homedir/.ssh/authorized_keys"
+	local group="$(id -gn "$user")"
+
+	if ! [ -f "$auth_file" ]; then
+		install -m700 -o "$user" -g "$group" -d "${auth_file%/*}"
+		install -m600 -o "$user" -g "$group" /dev/null "$auth_file"
+	fi
+
+	printf '%s\n' "$keys" | while read -r key; do
+		if ! grep -Fq "$key" "$auth_file"; then
+			echo "Adding SSH key to $auth_file" >&2
+			printf '%s\n' "$key" >> "$auth_file"
+		fi
+	done
+}
+
+if [ "${ADMIN_SSH_KEYS-}" ]; then
+	if ! id "${ADMIN_USER-}" >/dev/null 2>&1; then
+		echo "ERROR: User $ADMIN_USER does not exist!" >&2
+		exit 1
+	fi
+	update_ssh_keys "$ADMIN_USER" "$ADMIN_SSH_KEYS"
+fi

@@ -1,0 +1,15 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -euo pipefail
+
+[ "${TIMEZONE-}" ] || exit 0
+
+timezone="$(systemsetup -gettimezone)"
+timezone="${timezone#*: }"
+
+if [ "$timezone" != "$TIMEZONE" ]; then
+	echo "Changing timezone from '$timezone' to '$TIMEZONE'" >&2
+
+	# Error:-99 happens even when the timezone is correctly changed.
+	systemsetup -settimezone "$TIMEZONE" 2>&1 | grep -v 'Error:-99 File:/AppleInternal' 2>&1
+fi

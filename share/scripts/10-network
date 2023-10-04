@@ -1,0 +1,155 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -euo pipefail
+
+# Prints value of the specified variable $1, or returns 1 if the variable is
+# empty or not defined.
+getval() {
+	local varname="$1"
+
+	eval "printf '%s\n' \${$varname-}" | grep .
+}
+
+# Prints value of the specified variable $1, or print error and return 1 if the
+# variable is empty or not defined.
+getvalreq() {
+	local varname="$1"
+
+	getval "$varname" || {
+		echo "ERROR: $varname is not set or is empty" >&2
+		return 1
+	}
+}
+
+# Prints network service name associated with the given MAC address, or returns
+# 1 if not found. Note that service name may contain spaces!
+find_netservice_by_mac() {
+	local mac="$(echo "$1" | tr '[A-F]' '[a-f]')"
+
+	local service="$(
+		networksetup -listAllNetworkServices | grep -Fv 'service is disabled.' | while read name; do
+			if networksetup -getinfo "$name" | grep -Fxq "Ethernet Address: $mac"; then
+				echo "$name"
+				break
+			fi
+		done
+	)"
+	[ "$service" ] || return 1
+
+	echo "$service"
+}
+
+setup_network() {
+	local service="$1"
+	local varprefix="$2"
+	local rc=0
+
+	local method4 method6
+	if method4="$(getval "${varprefix}_IPV4_METHOD")"; then
+		setup_ipv4 "$service" "$method4" "$varprefix" || rc=1
+	fi
+	if method6="$(getval "${varprefix}_IPV6_METHOD")"; then
+		setup_ipv6 "$service" "$method6" "$varprefix" || rc=1
+	fi
+	if dns_srv="$(getval "${varprefix}_DNS_SERVERS")"; then
+		local dns_search="$(getval "${varprefix}_DNS_SEARCH")" ||:
+		setup_dns "$service" "$dns_srv" "$dns_search" || rc=1
+	fi
+
+	return $rc
+}
+
+setup_ipv4() {
+	local service="$1"
+	local method="$2"
+	local varprefix="$3"
+
+	# OpenNebula uses: static, dhcp
+	# cloud-init uses: static, dhcp, dhcp4
+	case "$method" in
+		static)
+			local addr mask gw
+			addr="$(getvalreq "${varprefix}_IPV4_ADDRESS")" || return 1
+			mask="$(getvalreq "${varprefix}_IPV4_MASK")" || return 1
+			gw="$(getvalreq "${varprefix}_IPV4_GATEWAY")" || return 1
+
+			echo "Setting $service to manual IPv4 with address: $addr, mask: $mask, gateway: $gw" >&2
+			networksetup -setmanual "$service" "$addr" "$mask" "$gw"
+		;;
+		dhcp | dhcp4)
+			echo "Setting $service to use DHCPv4" >&2
+			networksetup -setdhcp "$service"
+		;;
+		*)
+			echo "ERROR: Unsupported ${varprefix}_IPV4_METHOD: $method" >&2
+			return 1
+		;;
+	esac
+}
+
+setup_ipv6() {
+	local service="$1"
+	local method="$2"
+	local varprefix="$3"
+
+	# OpenNebula uses: static, auto, dhcp, disable
+	# cloud-init uses: static6, dhcp6, ipv6_slaac
+	case "$method" in
+		static | static6)
+			local addr prefix gw
+			addr="$(getvalreq "${varprefix}_IPV6_ADDRESS")" || return 1
+			prefix="$(getval "${varprefix}_IPV6_PREFIX" || echo '64')"
+			gw="$(getvalreq "${varprefix}_IPV6_GATEWAY")" || return 1
+	
+			echo "Setting $service to manual IPv6 with address: $addr, prefix: $prefix, gateway: $gw" >&2
+			networksetup -setv6manual "$service" "$addr" "$prefix" "$gw"
+		;;
+		auto | dhcp | dhcp6 | ipv6_slaac)
+			echo "Setting $service to automatic IPv6 mode" >&2
+			networksetup -setv6automatic "$service"
+		;;
+		disable)
+			echo "Disabling IPv6 on $service" >&2
+			networksetup -setv6off "$service"
+		;;
+		*)
+			echo "ERROR: Unsupported ${varprefix}_IPV6_METHOD: $method" >&2
+			return 1
+		;;
+	esac
+}
+
+setup_dns() {
+	local service="$1"
+	local servers="$2"
+	local search="$3"
+
+	echo "Setting nameservers for $service: $servers" >&2
+	networksetup -setDnsServers "$service" $servers || return 1
+
+	if [ "$search" ]; then
+		echo "Setting search domains for $service: $search" >&2
+		networksetup -setSearchDomains "$service" $search
+	fi
+}
+
+
+rc=0
+found=false
+for prefix in $(env | sed -En 's/^(ETH[0-9]+)_MAC=.*/\1/p'); do
+	mac="$(getval "${prefix}_MAC")" || continue
+
+	if service="$(find_netservice_by_mac "$mac")" && found=true; then
+		echo "MAC address $mac is associated with network service: $service" >&2
+		setup_network "$service" "$prefix" || rc=1
+	else
+		echo "ERROR: Ethernet interface with MAC $mac was not found!" >&2
+		rc=1
+	fi
+done
+
+if ! $found; then
+	echo 'WARN: No network interfaces to configure were found' >&2
+fi
+
+exit $rc

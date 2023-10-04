@@ -1,0 +1,12 @@
+#!/bin/sh
+# vim: set ts=4 sw=4:
+set -eu
+
+if [ "${ADMIN_USER-}" ] && ! id "$ADMIN_USER" >/dev/null 2>&1; then
+	echo "Creating user $ADMIN_USER" >&2
+
+	sysadminctl -addUser "$ADMIN_USER" \
+		-admin \
+		${ADMIN_UID:+"-UID $ADMIN_UID"} \
+		${ADMIN_SHELL:+"-shell $ADMIN_SHELL"}
+fi

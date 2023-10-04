@@ -1,0 +1,19 @@
+name: CI
+on:
+  - push
+  - pull_request
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v1
+
+      - name: make check
+        run: make check
+
+      - name: make install
+        run: |
+          make install DESTDIR=dest
+          tree dest/
