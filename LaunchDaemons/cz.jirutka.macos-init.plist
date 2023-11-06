@@ -12,7 +12,7 @@
     <key>Program</key>
     <string>/usr/local/bin/macos-init</string>
     <key>RunAtLoad</key>
-    <false/>
+    <true/>
     <key>KeepAlive</key>
     <false/>
     <key>LaunchOnlyOnce</key>
