@@ -78,7 +78,7 @@ remap_key() {
 		fi
 	done
 
-	case "$key" in ETH[0-9]*_)
+	case "$key" in ETH[0-9]_*)
 		for kv in $ETH_CONTEXT_MAPPING; do
 			if [ "${kv%%=*}" = "${key#ETH[0-9]*_}" ]; then
 				echo "${key%%_*}_${kv#*=}"
