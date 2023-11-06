@@ -13,6 +13,11 @@ class MacosInit < Formula
     system "make", "install", "PREFIX=#{prefix}", "LAUNCHD_DAEMON_DIR=#{prefix}"
   end
 
+  def post_install
+    # Prepare directory for logs.
+    mkdir_p var/"log"
+  end
+
   service do
     name macos: "cz.jirutka.macos-init"
     require_root true
