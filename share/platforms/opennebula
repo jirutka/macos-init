@@ -42,7 +42,7 @@ read_params() {
 
 		val="$(
 			. "$context_mount_dir"/context.sh
-			eval "printf '%s\n' \$$key"
+			eval "printf '%s\n' \"\$$key\""
 		)" >/dev/null
 		printf "export %s='%s'\n" "$var" "$(escape_squote "$val")"
 	done

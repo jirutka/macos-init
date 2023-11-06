@@ -7,7 +7,7 @@ set -euo pipefail
 getval() {
 	local varname="$1"
 
-	eval "printf '%s\n' \${$varname-}" | grep .
+	eval "printf '%s\n' \"\${$varname-}\"" | grep .
 }
 
 # Prints value of the specified variable $1, or print error and return 1 if the
@@ -100,7 +100,7 @@ setup_ipv6() {
 			addr="$(getvalreq "${varprefix}_IPV6_ADDRESS")" || return 1
 			prefix="$(getval "${varprefix}_IPV6_PREFIX" || echo '64')"
 			gw="$(getvalreq "${varprefix}_IPV6_GATEWAY")" || return 1
-	
+
 			echo "Setting $service to manual IPv6 with address: $addr, prefix: $prefix, gateway: $gw" >&2
 			networksetup -setv6manual "$service" "$addr" "$prefix" "$gw"
 		;;
