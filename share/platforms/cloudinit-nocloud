@@ -22,6 +22,10 @@ readonly DEFAULT_USERDATA_MAPPING="
 
 command -v yq >/dev/null || die "yq was not found; install it using 'brew install yq'"
 
+ready() {
+	diskutil list physical "$cloudinit_volume_label" >/dev/null
+}
+
 read_params() {
 	diskutil mount "$cloudinit_volume_label" >/dev/null
 	check_cidata
@@ -86,6 +90,6 @@ cidata_get() {
 
 
 case "${1-}" in
-	read_params) read_params;;
+	ready | read_params) "$1";;
 	*) die "Unknown action: ${1-}"
 esac

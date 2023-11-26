@@ -16,6 +16,7 @@ esac
 skip_scripts=
 platforms_dir="$BASE_DIR/platforms"
 script_dirs="/usr/local/etc/macos-init.d $BASE_DIR/scripts"
+wait_timeout=60
 
 . "$BASE_DIR"/utils.sh
 
@@ -25,6 +26,17 @@ script_dirs="/usr/local/etc/macos-init.d $BASE_DIR/scripts"
 
 [ -f "$platforms_dir/$platform" ] \
 	|| die "Unsupported platform: $platform"
+
+if ! "$platforms_dir/$platform" ready; then
+	echo "Waiting up to $wait_timeout sec for preconditions to be satisfied..." >&2
+
+	remaining="$wait_timeout"
+	while ! "$platforms_dir/$platform" ready; do
+		[ "$remaining" -gt 0 ] || die "Timeout $wait_timeout seconds exceeded"
+		remaining="$(( $remaining - 1 ))"
+		sleep 1
+	done
+fi
 
 params="$("$platforms_dir/$platform" read_params)" \
 	|| die "Failed to read parameters for platform $platform"
