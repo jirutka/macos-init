@@ -27,15 +27,11 @@ wait_timeout=60
 [ -f "$platforms_dir/$platform" ] \
 	|| die "Unsupported platform: $platform"
 
-if ! "$platforms_dir/$platform" ready; then
+if ! "$platforms_dir/$platform" ready 2>/dev/null; then
 	echo "Waiting up to $wait_timeout sec for preconditions to be satisfied..." >&2
 
-	remaining="$wait_timeout"
-	while ! "$platforms_dir/$platform" ready; do
-		[ "$remaining" -gt 0 ] || die "Timeout $wait_timeout seconds exceeded"
-		remaining="$(( $remaining - 1 ))"
-		sleep 1
-	done
+	wait_for "$wait_timeout" "$platforms_dir/$platform" ready \
+		|| die "Timeout $wait_timeout seconds exceeded"
 fi
 
 params="$("$platforms_dir/$platform" read_params)" \
