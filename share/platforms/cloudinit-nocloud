@@ -18,7 +18,7 @@ readonly DEFAULT_USERDATA_MAPPING="
 . "$MACINIT_CONFIG" || die "Failed to source config $MACINIT_CONFIG"
 
 : ${cloudinit_volume_label:="cidata"}
-: ${cidata_mount_dir:="/Volumes/$cloudinit_volume_label"}
+: ${cidata_mount_dir:="/tmp/macos-init-cidata"}
 
 command -v yq >/dev/null || die "yq was not found; install it using 'brew install yq'"
 
@@ -27,7 +27,13 @@ ready() {
 }
 
 read_params() {
-	diskutil mount "$cloudinit_volume_label" >/dev/null
+	mkdir -p "$cidata_mount_dir"
+	# If it's already mounted on a different mount point, diskutil won't mount
+	# it again, so try to unmount first.
+	diskutil umount "$cloudinit_volume_label" >/dev/null 2>&1 || true
+	diskutil mount nobrowse -mountPoint "$cidata_mount_dir" "$cloudinit_volume_label" >/dev/null
+	sleep 1  # XXX: diskutil exists before the volume is really mounted
+
 	check_cidata
 
 	set -f  # disable globbing
@@ -47,6 +53,7 @@ read_params() {
 	done
 
 	diskutil umount "$cloudinit_volume_label" >/dev/null
+	rmdir "$cidata_mount_dir" || true
 }
 
 check_cidata() {

@@ -23,7 +23,7 @@ readonly ETH_CONTEXT_MAPPING="
 . "$MACINIT_CONFIG" || die "Failed to source config $MACINIT_CONFIG"
 
 : ${opennebula_volume_label:="CONTEXT"}
-: ${context_mount_dir:="/Volumes/$opennebula_volume_label"}
+: ${context_mount_dir:="/tmp/macos-init-context"}
 
 
 ready() {
@@ -31,7 +31,13 @@ ready() {
 }
 
 read_params() {
-	diskutil mount "$opennebula_volume_label" >/dev/null
+	mkdir -p "$context_mount_dir"
+	# If it's already mounted on a different mount point, diskutil won't mount
+	# it again, so try to unmount first.
+	diskutil umount "$opennebula_volume_label" >/dev/null 2>&1 || true
+	diskutil mount nobrowse -mountPoint "$context_mount_dir" "$opennebula_volume_label" >/dev/null
+	sleep 1  # XXX: diskutil exists before the volume is really mounted
+
 	check_context
 
 	set -f  # disable globbing
@@ -53,6 +59,7 @@ read_params() {
 	done
 
 	diskutil umount "$opennebula_volume_label" >/dev/null
+	rmdir "$context_mount_dir" || true
 }
 
 check_context() {
