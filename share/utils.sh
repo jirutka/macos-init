@@ -34,6 +34,28 @@ list_has() {
 	return 1
 }
 
+# Mounts volume $1 at mount point $2 and wait until it's really mounted.
+mount_volume() {
+	local volume="$1"
+	local mountpoint="$2"
+
+	mkdir -p "$mountpoint"
+	mountpoint="$(readlink -f "$mountpoint")"
+
+	# If it's already mounted on a different mount point, diskutil won't mount
+	# it again, so try to unmount first.
+	diskutil umount "$volume" >/dev/null 2>&1 || true
+	diskutil mount nobrowse -mountPoint "$mountpoint" "$volume" >/dev/null || return 1
+
+	# diskutil terminates before the volume is really mounted, so we have to
+	# wait for it.
+	wait_for 10 _ismountpoint "$mountpoint"
+}
+
+_ismountpoint() {
+	mount | grep -qFw "$1" >/dev/null 2>&1
+}
+
 # Normalizes $1 to be a valid shell variable name and converts it to
 # SCREAMING_CASE.
 normalize_var_name() {
@@ -44,4 +66,18 @@ normalize_var_name() {
 # single-quoted string.
 escape_squote() {
 	printf '%s' "$1" | sed "s/'/'\\\\''/g"
+}
+
+# Executes command $2... every second until it terminates with a zero status
+# or the timeout $1 (seconds) is exceeded.
+wait_for() {
+	local timeout="$1"; shift
+
+	while [ "$timeout" -gt 0 ]; do
+		"$@" && return 0
+		sleep 1
+		timeout="$(( $timeout - 1 ))"
+	done
+
+	return 1
 }

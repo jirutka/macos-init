@@ -27,13 +27,8 @@ ready() {
 }
 
 read_params() {
-	mkdir -p "$cidata_mount_dir"
-	# If it's already mounted on a different mount point, diskutil won't mount
-	# it again, so try to unmount first.
-	diskutil umount "$cloudinit_volume_label" >/dev/null 2>&1 || true
-	diskutil mount nobrowse -mountPoint "$cidata_mount_dir" "$cloudinit_volume_label" >/dev/null
-	sleep 1  # XXX: diskutil exists before the volume is really mounted
-
+	mount_volume "$cloudinit_volume_label" "$cidata_mount_dir" \
+		|| die "Failed to mount volume $cloudinit_volume_label"
 	check_cidata
 
 	set -f  # disable globbing

@@ -31,13 +31,8 @@ ready() {
 }
 
 read_params() {
-	mkdir -p "$context_mount_dir"
-	# If it's already mounted on a different mount point, diskutil won't mount
-	# it again, so try to unmount first.
-	diskutil umount "$opennebula_volume_label" >/dev/null 2>&1 || true
-	diskutil mount nobrowse -mountPoint "$context_mount_dir" "$opennebula_volume_label" >/dev/null
-	sleep 1  # XXX: diskutil exists before the volume is really mounted
-
+	mount_volume "$opennebula_volume_label" "$context_mount_dir" \
+		|| die "Failed to mount volume $opennebula_volume_label"
 	check_context
 
 	set -f  # disable globbing
