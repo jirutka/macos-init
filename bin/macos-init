@@ -16,7 +16,7 @@ esac
 skip_scripts=
 platforms_dir="$BASE_DIR/platforms"
 script_dirs="/usr/local/etc/macos-init.d $BASE_DIR/scripts"
-wait_timeout=60
+wait_timeout=120
 
 . "$BASE_DIR"/utils.sh
 
