@@ -3,10 +3,10 @@
 set -euo pipefail
 
 apfs_cntr_limits() {
-	local cntr_dev="$1"
+	local part_dev="$1"
 	local key="$2"
 
-	diskutil apfs resizeContainer "$cntr_dev" limits -plist | plutil -extract "$key" raw -
+	diskutil apfs resizeContainer "$part_dev" limits -plist | plutil -extract "$key" raw -
 }
 
 b2gb() {
@@ -24,12 +24,12 @@ fs_resize_if_needed() {
 	local cntr_dev phy_dev cur_size max_size
 
 	cntr_dev="$(diskutil info -plist / | plutil -extract ParentWholeDisk raw -)"
-	phy_dev="$(diskutil info -plist "$cntr_dev" \
+	part_dev="$(diskutil info -plist "$cntr_dev" \
 		| plutil -extract APFSPhysicalStores.0.APFSPhysicalStore raw -)"
-	phy_dev="${phy_dev%s[0-9]}"
+	phy_dev="${part_dev%s[0-9]}"
 
-	cur_size="$(apfs_cntr_limits "$cntr_dev" CurrentSize)"
-	max_size="$(apfs_cntr_limits "$cntr_dev" MaximumSize)"
+	cur_size="$(apfs_cntr_limits "$part_dev" CurrentSize)"
+	max_size="$(apfs_cntr_limits "$part_dev" MaximumSize)"
 
 	if [ "$max_size" -ne "$cur_size" ]; then
 		echo "Resizing $cntr_dev on $phy_dev from $(b2gb $cur_size) to $(b2gb $max_size) GiB" >&2
