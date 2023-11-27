@@ -1,6 +1,6 @@
 = macOS-init
 :proj-name: macos-init
-:version: 0.1.4
+:version: 0.1.5
 :gh-name: jirutka/{proj-name}
 :scripts-dir: share/scripts
 
