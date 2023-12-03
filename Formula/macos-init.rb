@@ -1,7 +1,7 @@
 class MacosInit < Formula
   desc "Simplified cloud-init for macOS"
   homepage "https://github.com/jirutka/macos-init"
-  version "0.1.5"
+  version "0.1.6"
   url "https://github.com/jirutka/macos-init/archive/v#{version}/macos-init-#{version}.tar.gz"
   sha256 ""
   license "MIT"
