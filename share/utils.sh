@@ -45,6 +45,7 @@ mount_volume() {
 	# If it's already mounted on a different mount point, diskutil won't mount
 	# it again, so try to unmount first.
 	diskutil umount "$volume" >/dev/null 2>&1 || true
+	sleep 1
 	diskutil mount nobrowse -mountPoint "$mountpoint" "$volume" >/dev/null || return 1
 
 	# diskutil terminates before the volume is really mounted, so we have to
