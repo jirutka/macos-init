@@ -20,41 +20,46 @@ wait_timeout=120
 
 . "$BASE_DIR"/utils.sh
 
-[ -f "$CONFIG_FILE" ] \
-	|| die "Config file '$CONFIG_FILE' does not exist or is not readable"
-. "$CONFIG_FILE"
+{
+	[ -f "$CONFIG_FILE" ] \
+		|| die "Config file '$CONFIG_FILE' does not exist or is not readable"
+	. "$CONFIG_FILE"
 
-[ -f "$platforms_dir/$platform" ] \
-	|| die "Unsupported platform: $platform"
+	[ -f "$platforms_dir/$platform" ] \
+		|| die "Unsupported platform: $platform"
 
-if ! "$platforms_dir/$platform" ready 2>/dev/null; then
-	echo "Waiting up to $wait_timeout sec for preconditions to be satisfied..." >&2
+	if ! "$platforms_dir/$platform" ready 2>/dev/null; then
+		echo "Waiting up to $wait_timeout sec for preconditions to be satisfied..." >&2
 
-	wait_for "$wait_timeout" "$platforms_dir/$platform" ready \
-		|| die "Timeout $wait_timeout seconds exceeded"
-fi
+		wait_for "$wait_timeout" "$platforms_dir/$platform" ready \
+			|| die "Timeout $wait_timeout seconds exceeded"
+	fi
 
-params="$("$platforms_dir/$platform" read_params)" \
-	|| die "Failed to read parameters for platform $platform"
-eval "$params"
+	params="$("$platforms_dir/$platform" read_params)" \
+		|| die "Failed to read parameters for platform $platform"
+	eval "$params"
 
-scripts=$(find $script_dirs \
-	! -type d -perm +1 -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null \
-	| sort | uniq || :)
-[ "$scripts" ] || die 'No provisioning scripts found!'
+	scripts=$(find $script_dirs \
+		! -type d -perm +1 -mindepth 1 -maxdepth 1 -exec basename {} \; 2>/dev/null \
+		| sort | uniq || :)
+	[ "$scripts" ] || die 'No provisioning scripts found!'
 
-rc=0
-for script in $scripts; do
-	for dir in $script_dirs; do
-		[ -x "$dir/$script" ] || continue
-		list_has "${script#[0-9]*-}" ${SKIP_SCRIPTS:-} $skip_scripts && break
+	rc=0
+	for script in $scripts; do
+		for dir in $script_dirs; do
+			[ -x "$dir/$script" ] || continue
+			list_has "${script#[0-9]*-}" ${SKIP_SCRIPTS:-} $skip_scripts && break
 
-		"$dir/$script" || {
-			warn "Provisioning script $script failed"
-			rc=1
-		}
-		break
+			"$dir/$script" || {
+				warn "Provisioning script $script failed"
+				rc=1
+			}
+			break
+		done
 	done
-done
 
-exit $rc
+	exit $rc
+
+} 2>&1 | while read -r line; do
+	echo "$(date '%Y-%m-%d %H:%M:%S') $line" >&2
+done
