@@ -61,5 +61,5 @@ wait_timeout=120
 	exit $rc
 
 } 2>&1 | while read -r line; do
-	echo "$(date '%Y-%m-%d %H:%M:%S') $line" >&2
+	echo "$(date +'%Y-%m-%d %H:%M:%S') $line" >&2
 done
