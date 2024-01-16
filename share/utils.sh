@@ -34,19 +34,16 @@ list_has() {
 	return 1
 }
 
-# Mounts volume $1 at mount point $2 and wait until it's really mounted.
+# If the volume $1 is not mounted, mounts it at the default mount point
+# (/Volumes/$1) and waits until it's really mounted.
 mount_volume() {
 	local volume="$1"
-	local mountpoint="$2"
+	local mountpoint="/Volumes/$volume"
 
-	mkdir -p "$mountpoint"
-	mountpoint="$(readlink -f "$mountpoint")"
+	_ismountpoint "$mountpoint" && return 0
 
-	# If it's already mounted on a different mount point, diskutil won't mount
-	# it again, so try to unmount first.
-	diskutil umount "$volume" >/dev/null 2>&1 || true
-	sleep 1
-	diskutil mount nobrowse -mountPoint "$mountpoint" "$volume" >/dev/null || return 1
+	echo "Mounting $volume" >&2
+	diskutil mount nobrowse "$volume" >/dev/null || return 1
 
 	# diskutil terminates before the volume is really mounted, so we have to
 	# wait for it.

@@ -18,7 +18,7 @@ readonly DEFAULT_USERDATA_MAPPING="
 . "$MACINIT_CONFIG" || die "Failed to source config $MACINIT_CONFIG"
 
 : ${cloudinit_volume_label:="cidata"}
-: ${cidata_mount_dir:="/tmp/macos-init-cidata"}
+mount_dir="/Volumes/$cloudinit_volume_label"
 
 command -v yq >/dev/null || die "yq was not found; install it using 'brew install yq'"
 
@@ -27,7 +27,7 @@ ready() {
 }
 
 read_params() {
-	mount_volume "$cloudinit_volume_label" "$cidata_mount_dir" \
+	mount_volume "$cloudinit_volume_label" \
 		|| die "Failed to mount volume $cloudinit_volume_label"
 	check_cidata
 
@@ -48,16 +48,15 @@ read_params() {
 	done
 
 	diskutil umount "$cloudinit_volume_label" >/dev/null
-	rmdir "$cidata_mount_dir" || true
 }
 
 check_cidata() {
-	[ -f "$cidata_mount_dir/meta-data" ] \
-		|| die "File $cidata_mount_dir/meta-data does not exist or not readable"
+	[ -f "$mount_dir/meta-data" ] \
+		|| die "File $mount_dir/meta-data does not exist or not readable"
 
 	local header
-	header=$(head -n1 "$cidata_mount_dir/user-data") \
-		|| die "File $cidata_mount_dir/user-data does not exist or not readable"
+	header=$(head -n1 "$mount_dir/user-data") \
+		|| die "File $mount_dir/user-data does not exist or not readable"
 
 	case "${header%% *}" in
 		'#cloud-config') return 0;;
@@ -79,7 +78,7 @@ get_mapping() {
 }
 
 cidata_get() {
-	local file="$cidata_mount_dir/$1"
+	local file="$mount_dir/$1"
 	local keypath="$2"
 
 	local query="$(echo "${keypath%/\*}" | tr '/' '\n' | xargs printf '."%s"')"

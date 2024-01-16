@@ -23,7 +23,7 @@ readonly ETH_CONTEXT_MAPPING="
 . "$MACINIT_CONFIG" || die "Failed to source config $MACINIT_CONFIG"
 
 : ${opennebula_volume_label:="CONTEXT"}
-: ${context_mount_dir:="/tmp/macos-init-context"}
+mount_dir="/Volumes/$opennebula_volume_label"
 
 
 ready() {
@@ -31,7 +31,7 @@ ready() {
 }
 
 read_params() {
-	mount_volume "$opennebula_volume_label" "$context_mount_dir" \
+	mount_volume "$opennebula_volume_label" \
 		|| die "Failed to mount volume $opennebula_volume_label"
 	check_context
 
@@ -47,28 +47,27 @@ read_params() {
 		fi
 
 		val="$(
-			. "$context_mount_dir"/context.sh
+			. "$mount_dir"/context.sh
 			eval "printf '%s\n' \"\$$key\""
 		)" >/dev/null
 		printf "export %s='%s'\n" "$var" "$(escape_squote "$val")"
 	done
 
 	diskutil umount "$opennebula_volume_label" >/dev/null
-	rmdir "$context_mount_dir" || true
 }
 
 check_context() {
-	[ -f "$context_mount_dir/context.sh" ] \
-		|| die "File $context_mount_dir/context.sh does not exist or not readable"
+	[ -f "$mount_dir/context.sh" ] \
+		|| die "File $mount_dir/context.sh does not exist or not readable"
 
-	sh -n "$context_mount_dir/context.sh" 2>/dev/null \
-		|| die "File $context_mount_dir/context.sh is not a valid shell script"
+	sh -n "$mount_dir/context.sh" 2>/dev/null \
+		|| die "File $mount_dir/context.sh is not a valid shell script"
 }
 
 # Prints names of variables declared in the context.sh.
 context_keys() {
 	env -i /bin/dash -ea <<-EOF
-		. "$context_mount_dir"/context.sh
+		. "$mount_dir"/context.sh
 		awk 'BEGIN { for (v in ENVIRON) print v }' \
 			| grep -Ev '^PWD|SHLVL|AWKPATH|AWKLIBPATH$'
 	EOF
