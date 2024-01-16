@@ -57,7 +57,7 @@ _ismountpoint() {
 # Normalizes $1 to be a valid shell variable name and converts it to
 # SCREAMING_CASE.
 normalize_var_name() {
-	printf %s "$1" | tr '[a-z]' '[A-Z]' | sed 's/[^A-Z0-9_]/_/g'
+	printf %s "$1" | tr 'a-z' 'A-Z' | sed 's/[^A-Z0-9_]/_/g'
 }
 
 # Escapes single quote marks (') in the given string, so it can be used in a
