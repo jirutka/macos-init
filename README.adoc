@@ -27,7 +27,18 @@ By default, `**$ADMIN_USER**` is mapped to `USERNAME` and `**$ADMIN_SSH_KEYS**` 
 
 == Scripts
 
-=== link:{scripts-dir}/50-admin-user[10-network]
+=== link:{scripts-dir}/20-hostname[20-hostname]
+
+Sets the hostname to `**$FQDN**` or, if not provided, `**$SET_HOSTNAME**`.
+It should contain only alphanumeric ASCII characters, a hyphen and period (`[a-zA-Z0-9.-]`), all other characters will be replaced with a hyphen (`-`).
+
+
+=== link:{scripts-dir}/20-timezone[20-timezone]
+
+Changes the system timezone to `**$TIMEZONE**` (e.g. `Europe/Prague`, `UTC`), if provided.
+
+
+=== link:{scripts-dir}/30-network[30-network]
 
 *Note*: This script is fully supported only on *OpenNebula*. If you use Cloud-init/nocloud, you must specify `params_mapping` in link:etc/{proj-name}.conf[] according to your environment.
 
@@ -60,26 +71,15 @@ Creates an user account named `**$ADMIN_USER**` with the admin role and shell `*
 If `**$ADMIN_USER**` is not provided, this script is skipped.
 
 
-=== link:{scripts-dir}/50-grow-fs[50-grow-fs]
+=== link:{scripts-dir}/55-ssh-keys[55-ssh-keys]
+
+If `**$ADMIN_SSH_KEYS**` with SSH public key(s) is provided, adds them to `authorized_keys` of the user specified in `**$ADMIN_USER**`.
+
+
+=== link:{scripts-dir}/80-grow-fs[80-grow-fs]
 
 Extends the root filesystem (container) to the maximum disk capacity.
 Only APFS is currently supported.
-
-
-=== link:{scripts-dir}/50-hostname[50-hostname]
-
-Sets the hostname to `**$FQDN**` or, if not provided, `**$SET_HOSTNAME**`.
-It should contain only alphanumeric ASCII characters, a hyphen and period (`[a-zA-Z0-9.-]`), all other characters will be replaced with a hyphen (`-`).
-
-
-=== link:{scripts-dir}/50-timezone[50-timezone]
-
-Changes the system timezone to `**$TIMEZONE**` (e.g. `Europe/Prague`, `UTC`), if provided.
-
-
-=== link:{scripts-dir}/60-ssh-keys[60-ssh-keys]
-
-If `**$ADMIN_SSH_KEYS**` with SSH public key(s) is provided, adds them to `authorized_keys` of the user specified in `**$ADMIN_USER**`.
 
 
 == Installation
