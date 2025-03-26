@@ -1,15 +1,14 @@
-PKGNAME             := macos-init
-LAUNCHD_DAEMON_NAME := cz.jirutka.$(PKGNAME)
+export PKGNAME             := macos-init
+export LAUNCHD_DAEMON_NAME := cz.jirutka.$(PKGNAME)
 
-prefix              := $(or $(prefix),$(PREFIX),/usr/local)
-bindir              := $(prefix)/bin
-datadir             := $(prefix)/share
-sysconfdir          := $(prefix)/etc
-DATA_DIR            := $(datadir)/$(PKGNAME)
-LAUNCHD_DAEMON_DIR  := /Library/LaunchDaemons
+export prefix              := $(or $(prefix),$(PREFIX),/usr/local)
+export bindir              := $(prefix)/bin
+export datadir             := $(prefix)/share
+export sysconfdir          := $(prefix)/etc
+export DATA_DIR            := $(datadir)/$(PKGNAME)
+export LAUNCHD_DAEMON_DIR  := /Library/LaunchDaemons
 
 GIT                 := git
-INSTALL             := install
 SED                 := sed
 
 MAKEFILE_PATH        = $(lastword $(MAKEFILE_LIST))
@@ -33,16 +32,7 @@ check:
 
 #: Install files to ${DESTDIR}.
 install:
-	@$(INSTALL) -d $(DESTDIR)$(bindir)
-	@$(INSTALL) -v -m 755 bin/macos-init $(DESTDIR)$(bindir)/macos-init
-	@$(INSTALL) -d $(DESTDIR)$(sysconfdir)
-	@$(INSTALL) -v -m 644 etc/macos-init.conf $(DESTDIR)$(sysconfdir)/macos-init.conf
-	@$(INSTALL) -d $(DESTDIR)$(DATA_DIR)/platforms $(DESTDIR)$(DATA_DIR)/scripts
-	@$(INSTALL) -v -m 644 share/utils.sh $(DESTDIR)$(DATA_DIR)/utils.sh
-	@$(INSTALL) -v -m 755 share/platforms/* $(DESTDIR)$(DATA_DIR)/platforms/
-	@$(INSTALL) -v -m 755 share/scripts/* $(DESTDIR)$(DATA_DIR)/scripts/
-	@$(INSTALL) -d $(DESTDIR)$(LAUNCHD_DAEMON_DIR)
-	@$(INSTALL) -v -m 644 LaunchDaemons/$(LAUNCHD_DAEMON_NAME).plist $(DESTDIR)$(LAUNCHD_DAEMON_DIR)/$(LAUNCHD_DAEMON_NAME).plist
+	@ ./install.sh
 
 #: Remove files previously installed to ${DESTDIR}.
 uninstall:
