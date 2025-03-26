@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # vim: set ts=4 sw=4:
 set -euo pipefail
 
@@ -32,7 +32,7 @@ fs_resize_if_needed() {
 	max_size="$(apfs_cntr_limits "$part_dev" MaximumSize)"
 
 	if [ "$max_size" -ne "$cur_size" ]; then
-		echo "Resizing $cntr_dev on $phy_dev from $(b2gb $cur_size) to $(b2gb $max_size) GiB" >&2
+		echo "Resizing $cntr_dev on $phy_dev from $(b2gb "$cur_size") to $(b2gb "$max_size") GiB" >&2
 
 		echo yes | diskutil repairDisk "$phy_dev"
 		diskutil apfs resizeContainer "/dev/$cntr_dev" 0
@@ -42,7 +42,7 @@ fs_resize_if_needed() {
 
 if [ "$(fs_type '/')" != 'apfs' ]; then
 	echo "WARN: Filesystem $(fs_type '/') is not supported, skipping grow-fs" >&2
-	return 0
+	exit 0
 fi
 
 fs_resize_if_needed '/'

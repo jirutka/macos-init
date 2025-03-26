@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # vim: set ts=4 sw=4:
 set -eu
 
@@ -14,7 +14,8 @@ update_ssh_keys() {
 	homedir="${homedir#*: }"  # strip 'FSHomeDirectory: '
 
 	local auth_file="$homedir/.ssh/authorized_keys"
-	local group="$(id -gn "$user")"
+	local group
+	group="$(id -gn "$user")"
 
 	if ! [ -f "$auth_file" ]; then
 		install -m700 -o "$user" -g "$group" -d "${auth_file%/*}"

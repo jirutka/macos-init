@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # vim: set ts=4 sw=4:
 set -euo pipefail
 
@@ -24,9 +24,11 @@ getvalreq() {
 # Prints network service name associated with the given MAC address, or returns
 # 1 if not found. Note that service name may contain spaces!
 find_netservice_by_mac() {
-	local mac="$(echo "$1" | tr '[A-F]' '[a-f]')"
+	local mac
+	mac="$(echo "$1" | tr '[A-F]' '[a-f]')"
 
-	local service="$(
+	local service
+	service="$(
 		networksetup -listAllNetworkServices | grep -Fv 'service is disabled.' | while read name; do
 			if networksetup -getinfo "$name" | grep -Fxq "Ethernet Address: $mac"; then
 				echo "$name"
@@ -52,7 +54,9 @@ setup_network() {
 		setup_ipv6 "$service" "$method6" "$varprefix" || rc=1
 	fi
 	if dns_srv="$(getval "${varprefix}_DNS_SERVERS")"; then
-		local dns_search="$(getval "${varprefix}_DNS_SEARCH")" ||:
+		local dns_search
+		dns_search="$(getval "${varprefix}_DNS_SEARCH")" ||:
+
 		setup_dns "$service" "$dns_srv" "$dns_search" || rc=1
 	fi
 

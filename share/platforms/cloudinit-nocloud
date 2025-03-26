@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/usr/bin/env bash
 # vim: set ts=4 sw=4:
 set -euo pipefail
 
@@ -81,7 +81,9 @@ cidata_get() {
 	local file="$mount_dir/$1"
 	local keypath="$2"
 
-	local query="$(echo "${keypath%/\*}" | tr '/' '\n' | xargs printf '."%s"')"
+	local query
+	query="$(echo "${keypath%/\*}" | tr '/' '\n' | xargs printf '."%s"')"
+
 	case "$keypath" in
 		*/'*') query="$query | .[]";;
 	esac
