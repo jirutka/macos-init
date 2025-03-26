@@ -27,7 +27,7 @@ ready() {
 }
 
 read_params() {
-	mount_volume "$cloudinit_volume_label" \
+	wait_for 10 mount_volume "$cloudinit_volume_label" \
 		|| die "Failed to mount volume $cloudinit_volume_label"
 	check_cidata
 
