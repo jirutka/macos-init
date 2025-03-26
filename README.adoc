@@ -102,7 +102,7 @@ sudo brew services start {proj-name}
 curl https://github.com/{gh-name}/archive/v{version}/{proj-name}-{version}.tar.gz | tar -xz
 cd {proj-name}-{version}
 
-sudo make install
+sudo ./install.sh
 sudo launchctl load /Library/LaunchDaemons/cz.jirutka.{proj-name}.plist
 ----
 
